@@ -191,21 +191,21 @@ namespace Editor
                 case Pal3BuildTarget.Windows_arm64:
                     buildTarget = BuildTarget.StandaloneWindows64;
                     outputFolder += $"{GameConstants.AppName}{DirSeparator}";
-                    #if UNITY_2020_2_OR_NEWER && UNITY_EDITOR_WIN
+                    #if UNITY_EDITOR_WIN && UNITY_2020_2_OR_NEWER && !UNITY_2022_2_OR_NEWER
                     UnityEditor.WindowsStandalone.UserBuildSettings.architecture = OSArchitecture.ARM64;
                     #endif
                     break;
                 case Pal3BuildTarget.Windows_x86:
                     buildTarget = BuildTarget.StandaloneWindows;
                     outputFolder += $"{GameConstants.AppName}{DirSeparator}";
-                    #if UNITY_2020_2_OR_NEWER && UNITY_EDITOR_WIN
+                    #if UNITY_EDITOR_WIN && UNITY_2020_2_OR_NEWER && !UNITY_2022_2_OR_NEWER
                     UnityEditor.WindowsStandalone.UserBuildSettings.architecture = OSArchitecture.x86;
                     #endif
                     break;
                 case Pal3BuildTarget.Windows_x64:
                     buildTarget = BuildTarget.StandaloneWindows64;
                     outputFolder += $"{GameConstants.AppName}{DirSeparator}";
-                    #if UNITY_2020_2_OR_NEWER && UNITY_EDITOR_WIN
+                    #if UNITY_EDITOR_WIN && UNITY_2020_2_OR_NEWER && !UNITY_2022_2_OR_NEWER
                     UnityEditor.WindowsStandalone.UserBuildSettings.architecture = OSArchitecture.x64;
                     #endif
                     break;

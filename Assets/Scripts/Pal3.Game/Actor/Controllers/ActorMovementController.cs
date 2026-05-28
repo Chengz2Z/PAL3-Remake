@@ -366,7 +366,7 @@ namespace Pal3.Game.Actor.Controllers
 
             if (_actionController.GetRigidBody() is { isKinematic: false } actorRigidbody)
             {
-                actorRigidbody.linearVelocity = Vector3.zero;
+                actorRigidbody.velocity = Vector3.zero;
             }
         }
 

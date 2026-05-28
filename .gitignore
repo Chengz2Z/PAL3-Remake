@@ -88,5 +88,9 @@ crashlytics-build.properties
 # Materials that are using 3rd party assets
 /Assets/Resources/Materials/
 
+# Game resource and tools extracted files
+/Notes/extracted/
+/Resource/
+
 # VS Conde config file
 .vsconfig

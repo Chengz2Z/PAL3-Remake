@@ -8,6 +8,8 @@ namespace Pal3.Game.GameSystems.Combat.Actor.Controllers
     using System;
     using System.Collections;
     using Combat;
+    using Core.Contract.Constants;
+    using Core.Contract.Enums;
     using Engine.Animation;
     using Engine.Core.Implementation;
     using Game.Actor.Controllers;
@@ -20,10 +22,11 @@ namespace Pal3.Game.GameSystems.Combat.Actor.Controllers
     {
         private const string COMBAT_ANIMATION_NORMAL_ATTACK_EVENT_NAME_PREFIX = "work";
         private const string COMBAT_ANIMATION_JUMP_ATTACK_EVENT_NAME_PREFIX = "flydown";
-        
+
         private CombatActor _actor;
         private ActorActionController _actionController;
         private ElementPosition _elementPosition;
+        private CombatActorRuntimeState _runtimeState;
 
         public bool IsActive
         {
@@ -37,6 +40,12 @@ namespace Pal3.Game.GameSystems.Combat.Actor.Controllers
             }
         }
 
+        public CombatActor GetActor() => _actor;
+
+        public CombatActorRuntimeState GetRuntimeState() => _runtimeState;
+
+        public bool IsDefeated => _runtimeState != null && _runtimeState.IsDefeated;
+
         public void Init(CombatActor actor,
             ActorActionController actionController,
             ElementPosition elementPosition)
@@ -44,6 +53,7 @@ namespace Pal3.Game.GameSystems.Combat.Actor.Controllers
             _actor = actor;
             _actionController = actionController;
             _elementPosition = elementPosition;
+            _runtimeState = new CombatActorRuntimeState(actor.Info);
         }
 
         private void AnimationEventTriggered(object sender, string eventName)
@@ -117,8 +127,11 @@ namespace Pal3.Game.GameSystems.Combat.Actor.Controllers
 
             _actionController.Transform.LookAt(targetElementPosition);
             yield return Transform.MoveAsync(targetElementPosition, duration);
-            
+
             yield return _actionController.PerformActionAsync(_actor.GetAttackAction());
+
+            int damage = DamageCalculator.NormalAttack(_runtimeState, enemyActorController._runtimeState);
+            yield return enemyActorController.ApplyDamageAsync(damage);
 
             _actionController.PerformAction(_actor.GetMovementAction());
             _actionController.Transform.LookAt(myElementPosition);
@@ -127,6 +140,32 @@ namespace Pal3.Game.GameSystems.Combat.Actor.Controllers
             _actionController.PerformAction(_actor.GetPreAttackAction());
 
             _actionController.Transform.Rotation = currentRotation;
+        }
+
+        public IEnumerator ApplyDamageAsync(int damage)
+        {
+            if (_runtimeState == null) yield break;
+
+            _runtimeState.TakeDamage(damage);
+
+            if (_runtimeState.IsDefeated)
+            {
+                yield return _actionController.PerformActionAsync(
+                    ActorConstants.ActionToNameMap[
+                        _actor.Info.Type == CombatActorType.MainActor
+                            ? ActorActionType.Dead
+                            : ActorActionType.NpcBeAttacked]);
+            }
+            else
+            {
+                yield return _actionController.PerformActionAsync(
+                    ActorConstants.ActionToNameMap[
+                        _actor.Info.Type == CombatActorType.MainActor
+                            ? ActorActionType.BeAttack
+                            : ActorActionType.NpcBeAttacked]);
+
+                _actionController.PerformAction(_actor.GetPreAttackAction());
+            }
         }
     }
 }

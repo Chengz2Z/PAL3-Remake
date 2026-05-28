@@ -108,6 +108,11 @@ namespace Pal3.Game.GameSystems.Combat.Scene
             return _combatActorControllers.GetValueOrDefault(elementPosition);
         }
 
+        public IReadOnlyDictionary<ElementPosition, CombatActorController> GetAllCombatActorControllers()
+        {
+            return _combatActorControllers;
+        }
+
         public void LoadActors(Dictionary<ElementPosition, CombatActorInfo> combatActors,
             MeetType meetType)
         {

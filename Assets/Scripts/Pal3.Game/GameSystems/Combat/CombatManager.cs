@@ -7,7 +7,6 @@ namespace Pal3.Game.GameSystems.Combat
 {
     using System;
     using System.Collections.Generic;
-    using Actor.Controllers;
     using Camera;
     using Command;
     using Command.Extensions;
@@ -58,6 +57,8 @@ namespace Pal3.Game.GameSystems.Combat
 
         private CombatScene _combatScene;
         private CombatContext _currentCombatContext;
+        private CombatTurnSystem _turnSystem;
+        private bool _resultDispatched;
 
         public CombatManager(GameResourceProvider resourceProvider,
             TeamManager teamManager,
@@ -120,6 +121,11 @@ namespace Pal3.Game.GameSystems.Combat
                         ? "偷袭敌方成功！"
                         : "被敌人偷袭！"));
             }
+
+            _turnSystem = new CombatTurnSystem(_combatScene,
+                routine => Pal3.Instance.StartCoroutine(routine));
+            _turnSystem.Begin();
+            _resultDispatched = false;
         }
 
         public void ExitCombat()
@@ -129,6 +135,9 @@ namespace Pal3.Game.GameSystems.Combat
             Pal3.Instance.Execute(new CameraFadeInCommand());
             _sceneManager.UnloadCombatScene();
             ResetCameraPosition();
+
+            _turnSystem = null;
+            _combatScene = null;
         }
 
         private void SetCameraPosition(CombatCameraConfig config)
@@ -159,66 +168,30 @@ namespace Pal3.Game.GameSystems.Combat
         {
             if (Keyboard.current.escapeKey.wasPressedThisFrame)
             {
-                OnCombatFinished?.Invoke(this, new CombatResult
-                {
-                    IsPlayerWin = true,
-                    CombatContext = _currentCombatContext,
-                });
+                FinishCombat(playerWin: true);
+                return;
             }
 
-            CombatActorController fromController = null;
-            int fromPosition = (int)ElementPosition.AllyWater;
+            if (_turnSystem == null || _resultDispatched) return;
 
-            if (Keyboard.current.ctrlKey.isPressed)
-            {
-                fromPosition = (int)ElementPosition.EnemyWater;
-            }
+            _turnSystem.Tick();
 
-            if (Keyboard.current.f1Key.wasPressedThisFrame)
+            if (_turnSystem.IsFinished)
             {
-                fromController = _combatScene.GetCombatActorController((ElementPosition)fromPosition);
+                FinishCombat(_turnSystem.IsPlayerWin);
             }
-            else if (Keyboard.current.f2Key.wasPressedThisFrame)
-            {
-                fromController = _combatScene.GetCombatActorController((ElementPosition)(fromPosition + 1));
-            }
-            else if (Keyboard.current.f3Key.wasPressedThisFrame)
-            {
-                fromController = _combatScene.GetCombatActorController((ElementPosition)(fromPosition + 2));
-            }
-            else if (Keyboard.current.f4Key.wasPressedThisFrame)
-            {
-                fromController = _combatScene.GetCombatActorController((ElementPosition)(fromPosition + 3));
-            }
-            else if (Keyboard.current.f5Key.wasPressedThisFrame)
-            {
-                fromController = _combatScene.GetCombatActorController((ElementPosition)(fromPosition + 4));
-            }
-            else if (Keyboard.current.f6Key.wasPressedThisFrame)
-            {
-                fromController = _combatScene.GetCombatActorController((ElementPosition)(fromPosition + 5));
-            }
+        }
 
-            if (fromController != null)
+        private void FinishCombat(bool playerWin)
+        {
+            if (_resultDispatched) return;
+            _resultDispatched = true;
+
+            OnCombatFinished?.Invoke(this, new CombatResult
             {
-                CombatActorController toController = null;
-
-                while (true)
-                {
-                    int min = (int) (fromPosition == 0 ? ElementPosition.EnemyWater : ElementPosition.AllyWater);
-                    int max = (int) (fromPosition == 0 ? ElementPosition.EnemyCenter : ElementPosition.AllyCenter);
-
-                    ElementPosition toPosition = (ElementPosition)RandomGenerator.Range(min, max + 1);
-
-                    if (_combatScene.GetCombatActorController(toPosition) is {} controller)
-                    {
-                        toController = controller;
-                        break;
-                    }
-                }
-
-                Pal3.Instance.StartCoroutine(fromController.StartNormalAttackAsync(toController, _combatScene));
-            }
+                IsPlayerWin = playerWin,
+                CombatContext = _currentCombatContext,
+            });
         }
     }
 }

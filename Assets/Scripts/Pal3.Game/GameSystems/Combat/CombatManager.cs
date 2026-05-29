@@ -243,7 +243,7 @@ namespace Pal3.Game.GameSystems.Combat
             // Update UI
             if (_combatUIManager != null)
             {
-                _combatUIManager.UpdateActorStatus();
+                _combatUIManager.UpdateActorStatus(_combatStateManager);
             }
 
             if (_turnSystem.IsFinished)

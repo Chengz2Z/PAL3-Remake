@@ -87,6 +87,10 @@ namespace Pal3.Game.GameSystems.Combat.UI
         private Dictionary<ElementPosition, TextMeshProUGUI> _hpTexts = new();
         private Dictionary<ElementPosition, TextMeshProUGUI> _mpTexts = new();
 
+        // State icons
+        private Dictionary<ElementPosition, GameObject> _stateIconPanels = new();
+        private Dictionary<ElementPosition, Dictionary<ActorCombatStateType, GameObject>> _stateIcons = new();
+
         // Damage popup
         private GameObject _damagePopupPrefab;
         private List<GameObject> _activeDamagePopups = new();
@@ -171,9 +175,9 @@ namespace Pal3.Game.GameSystems.Combat.UI
         }
 
         /// <summary>
-        /// Update HP/MP bars for all combat actors.
+        /// Update HP/MP bars and state icons for all combat actors.
         /// </summary>
-        public void UpdateActorStatus()
+        public void UpdateActorStatus(CombatStateManager stateManager = null)
         {
             foreach ((ElementPosition position, CombatActorController controller) in
                      _combatScene.GetAllCombatActorControllers())
@@ -202,6 +206,12 @@ namespace Pal3.Game.GameSystems.Combat.UI
                 {
                     mpText.text = $"{state.CurrentMp}/{state.MaxMp}";
                 }
+            }
+
+            // Update state icons
+            if (stateManager != null)
+            {
+                UpdateStateIcons(stateManager);
             }
         }
 
@@ -260,6 +270,170 @@ namespace Pal3.Game.GameSystems.Combat.UI
             }
 
             StartCoroutine(AnimateDamagePopup(popup));
+        }
+
+        /// <summary>
+        /// Update state icons for all combat actors.
+        /// </summary>
+        public void UpdateStateIcons(CombatStateManager stateManager)
+        {
+            if (stateManager == null) return;
+
+            foreach ((ElementPosition position, CombatActorController controller) in
+                     _combatScene.GetAllCombatActorControllers())
+            {
+                if (controller == null) continue;
+
+                // Initialize state icon panel if not exists
+                if (!_stateIconPanels.ContainsKey(position))
+                {
+                    CreateStateIconPanel(position);
+                }
+
+                // Get active states for this actor
+                var activeStates = stateManager.GetActiveStates(controller).ToList();
+                var currentStateTypes = activeStates.Select(s => s.StateType).ToHashSet();
+
+                // Remove icons for states that are no longer active
+                if (_stateIcons.ContainsKey(position))
+                {
+                    var statesToRemove = _stateIcons[position]
+                        .Where(kvp => !currentStateTypes.Contains(kvp.Key))
+                        .Select(kvp => kvp.Key)
+                        .ToList();
+
+                    foreach (var stateType in statesToRemove)
+                    {
+                        if (_stateIcons[position][stateType] != null)
+                        {
+                            UnityEngine.Object.Destroy(_stateIcons[position][stateType]);
+                        }
+                        _stateIcons[position].Remove(stateType);
+                    }
+                }
+
+                // Add icons for new states
+                foreach (var state in activeStates)
+                {
+                    if (!_stateIcons.ContainsKey(position))
+                    {
+                        _stateIcons[position] = new Dictionary<ActorCombatStateType, GameObject>();
+                    }
+
+                    if (!_stateIcons[position].ContainsKey(state.StateType))
+                    {
+                        CreateStateIcon(position, state.StateType);
+                    }
+                }
+            }
+        }
+
+        private void CreateStateIconPanel(ElementPosition position)
+        {
+            GameObject panel = new GameObject($"StateIcons_{position}");
+            panel.transform.SetParent(_combatUICanvas.transform, false);
+
+            RectTransform rectTransform = panel.AddComponent<RectTransform>();
+            rectTransform.sizeDelta = new Vector2(100, 20);
+
+            // Position the panel near the HP/MP bars
+            Vector2 basePosition = GetStateIconPanelPosition(position);
+            rectTransform.anchoredPosition = basePosition;
+
+            // Add horizontal layout group
+            HorizontalLayoutGroup layout = panel.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 2;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+
+            _stateIconPanels[position] = panel;
+        }
+
+        private void CreateStateIcon(ElementPosition position, ActorCombatStateType stateType)
+        {
+            if (!_stateIconPanels.ContainsKey(position)) return;
+
+            GameObject icon = new GameObject($"StateIcon_{stateType}");
+            icon.transform.SetParent(_stateIconPanels[position].transform, false);
+
+            RectTransform rectTransform = icon.AddComponent<RectTransform>();
+            rectTransform.sizeDelta = new Vector2(16, 16);
+
+            // Add image component for the icon
+            Image image = icon.AddComponent<Image>();
+            image.color = GetStateColor(stateType);
+
+            // Add tooltip or text
+            TextMeshProUGUI text = icon.AddComponent<TextMeshProUGUI>();
+            text.text = GetStateAbbreviation(stateType);
+            text.fontSize = 8;
+            text.alignment = TextAlignmentOptions.Center;
+            text.color = Color.white;
+
+            if (!_stateIcons.ContainsKey(position))
+            {
+                _stateIcons[position] = new Dictionary<ActorCombatStateType, GameObject>();
+            }
+
+            _stateIcons[position][stateType] = icon;
+        }
+
+        private Vector2 GetStateIconPanelPosition(ElementPosition position)
+        {
+            // Position near the HP/MP bars
+            return position switch
+            {
+                ElementPosition.AllyWater => new Vector2(-200, -170),
+                ElementPosition.AllyFire => new Vector2(-200, -200),
+                ElementPosition.AllyWind => new Vector2(-200, -230),
+                ElementPosition.AllyThunder => new Vector2(-200, -260),
+                ElementPosition.AllyEarth => new Vector2(-200, -290),
+                ElementPosition.AllyCenter => new Vector2(-200, -320),
+                ElementPosition.EnemyWater => new Vector2(200, -170),
+                ElementPosition.EnemyFire => new Vector2(200, -200),
+                ElementPosition.EnemyWind => new Vector2(200, -230),
+                ElementPosition.EnemyThunder => new Vector2(200, -260),
+                ElementPosition.EnemyEarth => new Vector2(200, -290),
+                ElementPosition.EnemyCenter => new Vector2(200, -320),
+                _ => Vector2.zero,
+            };
+        }
+
+        private Color GetStateColor(ActorCombatStateType stateType)
+        {
+            return stateType switch
+            {
+                ActorCombatStateType.PoisonWind => new Color(0.5f, 0.8f, 0.5f), // Green
+                ActorCombatStateType.PoisonThunder => new Color(0.8f, 0.5f, 0.8f), // Purple
+                ActorCombatStateType.PoisonWater => new Color(0.5f, 0.5f, 0.8f), // Blue
+                ActorCombatStateType.PoisonFire => new Color(0.8f, 0.3f, 0.3f), // Red
+                ActorCombatStateType.PoisonEarth => new Color(0.6f, 0.4f, 0.2f), // Brown
+                ActorCombatStateType.Paralysis => new Color(0.8f, 0.8f, 0.2f), // Yellow
+                ActorCombatStateType.Sleep => new Color(0.6f, 0.6f, 0.8f), // Light blue
+                ActorCombatStateType.Seal => new Color(0.8f, 0.2f, 0.8f), // Magenta
+                ActorCombatStateType.Chaos => new Color(0.8f, 0.4f, 0.0f), // Orange
+                ActorCombatStateType.Regeneration => new Color(0.2f, 0.8f, 0.2f), // Bright green
+                _ => new Color(0.5f, 0.5f, 0.5f), // Gray
+            };
+        }
+
+        private string GetStateAbbreviation(ActorCombatStateType stateType)
+        {
+            return stateType switch
+            {
+                ActorCombatStateType.PoisonWind => "风",
+                ActorCombatStateType.PoisonThunder => "雷",
+                ActorCombatStateType.PoisonWater => "水",
+                ActorCombatStateType.PoisonFire => "火",
+                ActorCombatStateType.PoisonEarth => "土",
+                ActorCombatStateType.Paralysis => "麻",
+                ActorCombatStateType.Sleep => "眠",
+                ActorCombatStateType.Seal => "封",
+                ActorCombatStateType.Chaos => "乱",
+                ActorCombatStateType.Regeneration => "回",
+                _ => "?",
+            };
         }
 
         private System.Collections.IEnumerator AnimateDamagePopup(GameObject popup)

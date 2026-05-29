@@ -126,6 +126,18 @@ namespace Pal3.Game
         [SerializeField] private Button multiFunctionButton;
         [SerializeField] private Button mainMenuButton;
 
+        // Shop UI
+        [SerializeField] private CanvasGroup shopCanvasGroup;
+        [SerializeField] private TextMeshProUGUI shopNameText;
+        [SerializeField] private TextMeshProUGUI playerMoneyText;
+        [SerializeField] private Transform itemListContainer;
+        [SerializeField] private GameObject shopItemPrefab;
+        [SerializeField] private Button shopBuyButton;
+        [SerializeField] private Button shopSellButton;
+        [SerializeField] private Button shopCloseButton;
+        [SerializeField] private TextMeshProUGUI shopItemDescriptionText;
+        [SerializeField] private TextMeshProUGUI shopItemPriceText;
+
         // Event system
         [SerializeField] private EventSystem eventSystem;
 
@@ -163,6 +175,7 @@ namespace Pal3.Game
         private PlayerActorManager _playerActorManager;
         private InventoryManager _inventoryManager;
         private TradingManager _tradingManager;
+        private ShopUIManager _shopUIManager;
         private DialogueManager _dialogueManager;
         private PostProcessManager _postProcessManager;
         private EffectManager _effectManager;
@@ -286,8 +299,25 @@ namespace Pal3.Game
                 new InventoryManager(_gameResourceProvider)
             );
 
+            ServiceLocator.Instance.Register(_shopUIManager =
+                new ShopUIManager(_gameResourceProvider,
+                    _inventoryManager,
+                    _gameStateManager,
+                    _inputManager,
+                    shopCanvasGroup,
+                    shopNameText,
+                    playerMoneyText,
+                    itemListContainer,
+                    shopItemPrefab,
+                    shopBuyButton,
+                    shopSellButton,
+                    shopCloseButton,
+                    shopItemDescriptionText,
+                    shopItemPriceText)
+            );
+
             ServiceLocator.Instance.Register(_tradingManager =
-                new TradingManager(_gameResourceProvider)
+                new TradingManager(_gameResourceProvider, _shopUIManager)
             );
 
             ServiceLocator.Instance.Register(_teamManager =

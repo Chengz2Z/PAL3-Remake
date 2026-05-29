@@ -20,11 +20,13 @@ namespace Pal3.Game.GameSystems.Trading
         ICommandExecutor<UIShowDealerMenuCommand>
     {
         private readonly GameResourceProvider _resourceProvider;
+        private readonly ShopUIManager _shopUIManager;
         private readonly Dictionary<string, DealScriptFile> _dealScriptCache = new();
 
-        public TradingManager(GameResourceProvider resourceProvider)
+        public TradingManager(GameResourceProvider resourceProvider, ShopUIManager shopUIManager)
         {
             _resourceProvider = resourceProvider;
+            _shopUIManager = shopUIManager;
             CommandExecutorRegistry<ICommand>.Instance.Register(this);
         }
 
@@ -75,9 +77,8 @@ namespace Pal3.Game.GameSystems.Trading
             // 构建商店数据
             ShopData shopData = ConvertToShopData(dealScript, gameItemInfos);
 
-            // TODO: 显示商店UI
-            EngineLogger.Log($"Opening shop: {shopData.ShopName} ({shopData.Items.Count} items)");
-            Pal3.Instance.Execute(new UIDisplayNoteCommand($"商店: {shopData.ShopName} - {shopData.Items.Count}件商品"));
+            // 显示商店UI
+            _shopUIManager.ShowShop(shopData);
         }
 
         private DealScriptFile LoadDealScriptFile(string path)

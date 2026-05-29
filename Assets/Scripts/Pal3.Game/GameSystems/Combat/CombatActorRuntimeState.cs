@@ -46,5 +46,35 @@ namespace Pal3.Game.GameSystems.Combat
             CurrentHp -= actual;
             return actual;
         }
+
+        public void Heal(int amount)
+        {
+            if (amount < 0) return;
+            CurrentHp = Math.Min(CurrentHp + amount, MaxHp);
+        }
+
+        public void ConsumeMp(int amount)
+        {
+            if (amount < 0) return;
+            CurrentMp = Math.Max(CurrentMp - amount, 0);
+        }
+
+        public void RestoreMp(int amount)
+        {
+            if (amount < 0) return;
+            CurrentMp = Math.Min(CurrentMp + amount, MaxMp);
+        }
+
+        public void ConsumeSp(int amount)
+        {
+            if (amount < 0) return;
+            CurrentSp = Math.Max(CurrentSp - amount, 0);
+        }
+
+        public void RestoreSp(int amount)
+        {
+            if (amount < 0) return;
+            CurrentSp = Math.Min(CurrentSp + amount, MaxSp);
+        }
     }
 }

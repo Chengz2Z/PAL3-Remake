@@ -67,6 +67,7 @@ namespace Pal3.Game.GameSystems.Combat
         private bool _resultDispatched;
         private SkillManager _skillManager;
         private CombatItemManager _combatItemManager;
+        private CombatStateManager _combatStateManager;
 
         public CombatManager(GameResourceProvider resourceProvider,
             TeamManager teamManager,
@@ -84,10 +85,11 @@ namespace Pal3.Game.GameSystems.Combat
             _combatCameraConfigFile = resourceProvider.GetGameResourceFile<CombatCameraConfigFile>(
                 FileConstants.DataScriptFolderVirtualPath + COMBAT_CAMERA_CONFIG_FILE_NAME);
 
-            // Initialize skill and item managers
+            // Initialize skill, item, and state managers
             _skillManager = new SkillManager(resourceProvider);
             _combatItemManager = new CombatItemManager(resourceProvider,
                 Pal3.Instance.GetService<InventoryManager>());
+            _combatStateManager = new CombatStateManager();
         }
 
         public void EnterCombat(CombatContext combatContext)
@@ -145,6 +147,7 @@ namespace Pal3.Game.GameSystems.Combat
                 _combatUIManager,
                 _skillManager,
                 _combatItemManager,
+                _combatStateManager,
                 Pal3.Instance.GetService<GameResourceProvider>());
             _turnSystem.Begin();
             _resultDispatched = false;

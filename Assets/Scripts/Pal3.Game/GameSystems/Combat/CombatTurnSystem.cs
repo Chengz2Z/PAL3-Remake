@@ -37,6 +37,7 @@ namespace Pal3.Game.GameSystems.Combat
         private readonly CombatUIManager _combatUIManager;
         private readonly SkillManager _skillManager;
         private readonly CombatItemManager _combatItemManager;
+        private readonly CombatStateManager _combatStateManager;
         private readonly GameResourceProvider _resourceProvider;
 
         private readonly Queue<CombatActorController> _turnQueue = new();
@@ -50,6 +51,7 @@ namespace Pal3.Game.GameSystems.Combat
             CombatUIManager combatUIManager = null,
             SkillManager skillManager = null,
             CombatItemManager combatItemManager = null,
+            CombatStateManager combatStateManager = null,
             GameResourceProvider resourceProvider = null)
         {
             _combatScene = Requires.IsNotNull(combatScene, nameof(combatScene));
@@ -57,6 +59,7 @@ namespace Pal3.Game.GameSystems.Combat
             _combatUIManager = combatUIManager;
             _skillManager = skillManager;
             _combatItemManager = combatItemManager;
+            _combatStateManager = combatStateManager;
             _resourceProvider = resourceProvider;
         }
 
@@ -75,6 +78,11 @@ namespace Pal3.Game.GameSystems.Combat
                     return;
 
                 case CombatPhase.TurnStart:
+                    // Process state effects at turn start
+                    if (_currentActor != null && _combatStateManager != null)
+                    {
+                        _combatStateManager.ProcessTurnStart(_currentActor);
+                    }
                     AdvanceToNextActor();
                     break;
 
@@ -87,6 +95,11 @@ namespace Pal3.Game.GameSystems.Combat
                     break;
 
                 case CombatPhase.TurnEnd:
+                    // Process state effects at turn end
+                    if (_currentActor != null && _combatStateManager != null)
+                    {
+                        _combatStateManager.ProcessTurnEnd(_currentActor);
+                    }
                     Phase = CombatPhase.CheckResult;
                     break;
 
@@ -126,6 +139,14 @@ namespace Pal3.Game.GameSystems.Combat
             }
 
             _currentActor = next;
+
+            // Check if actor can take action (not paralyzed, sleeping, etc.)
+            if (_combatStateManager != null && !_combatStateManager.CanTakeAction(next))
+            {
+                // Actor cannot act due to state effect, skip turn
+                Phase = CombatPhase.TurnEnd;
+                return;
+            }
 
             // Check if this is a player actor
             if (IsPlayerActor(next))
@@ -197,6 +218,23 @@ namespace Pal3.Game.GameSystems.Combat
                         if (skillInfo != null)
                         {
                             _skillManager.ExecuteSkill(actor, target, skillInfo);
+
+                            // Apply skill state effects
+                            if (_combatStateManager != null && skillInfo.CombatStateImpactTypes != null)
+                            {
+                                foreach (var stateImpact in skillInfo.CombatStateImpactTypes)
+                                {
+                                    if (stateImpact.Value == CombatStateImpactType.Increase)
+                                    {
+                                        _combatStateManager.ApplyState(target, stateImpact.Key, 3); // 3 turns duration
+                                    }
+                                    else if (stateImpact.Value == CombatStateImpactType.Remove)
+                                    {
+                                        _combatStateManager.RemoveState(target, stateImpact.Key);
+                                    }
+                                }
+                            }
+
                             // Show skill effect animation or message
                             yield return new WaitForSeconds(1.0f);
                         }

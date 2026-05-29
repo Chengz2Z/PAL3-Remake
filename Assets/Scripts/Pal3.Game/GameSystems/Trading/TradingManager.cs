@@ -11,6 +11,7 @@ namespace Pal3.Game.GameSystems.Trading
     using Core.Command;
     using Core.Command.SceCommands;
     using Core.Contract.Constants;
+    using Core.DataReader.Cpk;
     using Core.DataReader.DealScript;
     using Core.DataReader.Gdb;
     using Data;

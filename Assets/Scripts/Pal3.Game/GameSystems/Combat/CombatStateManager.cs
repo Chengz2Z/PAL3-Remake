@@ -290,13 +290,6 @@ namespace Pal3.Game.GameSystems.Combat
                     runtimeState.TakeDamage(poisonDamage);
                     EngineLogger.Log($"{actor.GetActor().Info.Name} takes {poisonDamage} poison damage");
                     break;
-
-                case ActorCombatStateType.Regeneration:
-                    // HP regeneration
-                    int healAmount = state.Value > 0 ? state.Value : (int)(runtimeState.MaxHp * 0.05f);
-                    runtimeState.Heal(healAmount);
-                    EngineLogger.Log($"{actor.GetActor().Info.Name} regenerates {healAmount} HP");
-                    break;
             }
         }
 

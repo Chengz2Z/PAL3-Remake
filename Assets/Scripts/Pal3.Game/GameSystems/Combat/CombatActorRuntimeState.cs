@@ -5,6 +5,7 @@
 
 namespace Pal3.Game.GameSystems.Combat
 {
+    using System;
     using Core.Contract.Enums;
     using Core.DataReader.Gdb;
 

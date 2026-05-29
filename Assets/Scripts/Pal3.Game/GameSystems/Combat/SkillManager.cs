@@ -43,7 +43,7 @@ namespace Pal3.Game.GameSystems.Combat
             // Get skills that the actor can use based on their ID
             foreach (var skillInfo in _skillInfos.Values)
             {
-                if (CanActorUseSkill(actor, skillInfo))
+                if (CanActorUseSkill(actorController, skillInfo))
                 {
                     yield return skillInfo;
                 }
@@ -53,9 +53,12 @@ namespace Pal3.Game.GameSystems.Combat
         /// <summary>
         /// Check if an actor can use a specific skill.
         /// </summary>
-        public bool CanActorUseSkill(CombatActor actor, SkillInfo skillInfo)
+        public bool CanActorUseSkill(CombatActorController actorController, SkillInfo skillInfo)
         {
-            if (actor == null || skillInfo == null) return false;
+            if (actorController == null || skillInfo.Id == 0) return false;
+
+            CombatActor actor = actorController.GetActor();
+            if (actor == null) return false;
 
             // Check if the skill is applicable to this actor
             if (skillInfo.ApplicableActors != null && skillInfo.ApplicableActors.Count > 0)
@@ -69,14 +72,14 @@ namespace Pal3.Game.GameSystems.Combat
             }
 
             // Check if actor has enough MP
-            CombatActorRuntimeState runtimeState = actor.RuntimeState;
+            CombatActorRuntimeState runtimeState = actorController.GetRuntimeState();
             if (runtimeState != null && runtimeState.CurrentMp < skillInfo.MpConsumeValue)
             {
                 return false;
             }
 
             // Check if actor meets level requirement
-            if (runtimeState != null && runtimeState.Level < skillInfo.RequiredActorLevel)
+            if (runtimeState != null && actor.Info.Level < skillInfo.RequiredActorLevel)
             {
                 return false;
             }
@@ -98,7 +101,7 @@ namespace Pal3.Game.GameSystems.Combat
         /// </summary>
         public void ExecuteSkill(CombatActorController caster, CombatActorController target, SkillInfo skillInfo)
         {
-            if (caster == null || target == null || skillInfo == null) return;
+            if (caster == null || target == null || skillInfo.Id == 0) return;
 
             // Consume MP
             CombatActorRuntimeState casterState = caster.GetRuntimeState();
@@ -120,14 +123,12 @@ namespace Pal3.Game.GameSystems.Combat
                     ApplySkillEffectToAllTargets(caster, skillInfo);
                     break;
 
-                case TargetRangeType.EnemyPartyRow:
-                case TargetRangeType.FirstPartyRow:
+                case TargetRangeType.EnemyPartyOneRow:
                     // TODO: Implement row targeting
                     ApplySkillEffectToSingleTarget(target, skillInfo);
                     break;
 
-                case TargetRangeType.EnemyPartyColumn:
-                case TargetRangeType.FirstPartyColumn:
+                case TargetRangeType.EnemyPartyOneColumn:
                     // TODO: Implement column targeting
                     ApplySkillEffectToSingleTarget(target, skillInfo);
                     break;
@@ -142,7 +143,7 @@ namespace Pal3.Game.GameSystems.Combat
 
         private void ApplySkillEffectToSingleTarget(CombatActorController target, SkillInfo skillInfo)
         {
-            if (target == null || skillInfo == null) return;
+            if (target == null || skillInfo.Id == 0) return;
 
             CombatActorRuntimeState targetState = target.GetRuntimeState();
             if (targetState == null) return;

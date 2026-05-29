@@ -11,9 +11,12 @@ namespace Pal3.Game.GameSystems.Combat
     using System.Linq;
     using Actor.Controllers;
     using Core.Contract.Enums;
+    using Core.DataReader.Gdb;
     using Core.Utilities;
+    using Data;
     using Scene;
     using UI;
+    using UnityEngine;
 
     /// <summary>
     /// Stage-4 turn-based combat driver with UI support.
@@ -215,7 +218,7 @@ namespace Pal3.Game.GameSystems.Combat
                     if (_skillManager != null && _playerAction != null && _playerAction.SkillId > 0)
                     {
                         SkillInfo skillInfo = _skillManager.GetSkillInfo(_playerAction.SkillId);
-                        if (skillInfo != null)
+                        if (skillInfo.Id != 0)
                         {
                             _skillManager.ExecuteSkill(actor, target, skillInfo);
 
@@ -255,7 +258,7 @@ namespace Pal3.Game.GameSystems.Combat
                     if (_combatItemManager != null && _playerAction != null && _playerAction.ItemId > 0)
                     {
                         GameItemInfo itemInfo = _resourceProvider.GetGameItemInfos()[_playerAction.ItemId];
-                        if (itemInfo != null)
+                        if (itemInfo.Id != 0)
                         {
                             _combatItemManager.UseItem(actor, target, itemInfo);
                             // Show item use animation or message

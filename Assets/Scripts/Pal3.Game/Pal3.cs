@@ -299,26 +299,30 @@ namespace Pal3.Game
                 new InventoryManager(_gameResourceProvider)
             );
 
-            ServiceLocator.Instance.Register(_shopUIManager =
-                new ShopUIManager(_gameResourceProvider,
-                    _inventoryManager,
-                    _gameStateManager,
-                    _inputManager,
-                    shopCanvasGroup,
-                    shopNameText,
-                    playerMoneyText,
-                    itemListContainer,
-                    shopItemPrefab,
-                    shopBuyButton,
-                    shopSellButton,
-                    shopCloseButton,
-                    shopItemDescriptionText,
-                    shopItemPriceText)
-            );
+            // Shop UI and Trading system (optional - requires UI elements to be assigned in Inspector)
+            if (shopNameText != null)
+            {
+                ServiceLocator.Instance.Register(_shopUIManager =
+                    new ShopUIManager(_gameResourceProvider,
+                        _inventoryManager,
+                        _gameStateManager,
+                        _inputManager,
+                        shopCanvasGroup,
+                        shopNameText,
+                        playerMoneyText,
+                        itemListContainer,
+                        shopItemPrefab,
+                        shopBuyButton,
+                        shopSellButton,
+                        shopCloseButton,
+                        shopItemDescriptionText,
+                        shopItemPriceText)
+                );
 
-            ServiceLocator.Instance.Register(_tradingManager =
-                new TradingManager(_gameResourceProvider, _shopUIManager)
-            );
+                ServiceLocator.Instance.Register(_tradingManager =
+                    new TradingManager(_gameResourceProvider, _shopUIManager)
+                );
+            }
 
             ServiceLocator.Instance.Register(_teamManager =
                 new TeamManager(_playerActorManager, _sceneManager)

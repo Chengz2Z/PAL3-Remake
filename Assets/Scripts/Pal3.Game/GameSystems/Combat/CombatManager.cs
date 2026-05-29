@@ -21,7 +21,9 @@ namespace Pal3.Game.GameSystems.Combat
     using Data;
     using Engine.Core.Abstraction;
     using Engine.Extensions;
+    using Engine.Services;
     using Game.Scene;
+    using GameSystems.Inventory;
     using Scene;
     using State;
     using Team;
@@ -29,6 +31,7 @@ namespace Pal3.Game.GameSystems.Combat
     using UnityEngine;
     using UnityEngine.EventSystems;
     using UnityEngine.InputSystem;
+    using UnityEngine.UI;
 
     using Quaternion = UnityEngine.Quaternion;
     using Vector3 = UnityEngine.Vector3;
@@ -88,7 +91,7 @@ namespace Pal3.Game.GameSystems.Combat
             // Initialize skill, item, and state managers
             _skillManager = new SkillManager(resourceProvider);
             _combatItemManager = new CombatItemManager(resourceProvider,
-                Pal3.Instance.GetService<InventoryManager>());
+                ServiceLocator.Instance.Get<InventoryManager>());
             _combatStateManager = new CombatStateManager();
         }
 
@@ -130,6 +133,9 @@ namespace Pal3.Game.GameSystems.Combat
 
             _combatScene.LoadActors(combatActors, combatContext.MeetType, _combatUIManager);
 
+            // Initialize HP/MP bars now that actors are loaded
+            _combatUIManager.InitializeHPMPBars();
+
             SetCameraPosition(_combatCameraConfigFile.DefaultCamConfigs[0]);
 
             Pal3.Instance.Execute(new CameraFadeInCommand());
@@ -148,7 +154,7 @@ namespace Pal3.Game.GameSystems.Combat
                 _skillManager,
                 _combatItemManager,
                 _combatStateManager,
-                Pal3.Instance.GetService<GameResourceProvider>());
+                ServiceLocator.Instance.Get<GameResourceProvider>());
             _turnSystem.Begin();
             _resultDispatched = false;
         }
@@ -181,7 +187,7 @@ namespace Pal3.Game.GameSystems.Combat
 
             // Create combat UI manager
             _combatUIManager = new CombatUIManager(
-                Pal3.Instance.GetService<GameResourceProvider>(),
+                ServiceLocator.Instance.Get<GameResourceProvider>(),
                 _combatScene,
                 _combatUICanvas,
                 _eventSystem,

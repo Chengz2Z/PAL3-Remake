@@ -8,6 +8,7 @@ namespace Pal3.Game.GameSystems.Combat.Scene
     using System.Collections.Generic;
     using Actor;
     using Actor.Controllers;
+    using Game.Actor.Controllers;
     using Core.Contract.Constants;
     using Core.Contract.Enums;
     using Core.DataReader.Cpk;
@@ -111,7 +112,7 @@ namespace Pal3.Game.GameSystems.Combat.Scene
 
         public IReadOnlyDictionary<ElementPosition, CombatActorController> GetAllCombatActorControllers()
         {
-            return _combatActorControllers;
+            return _combatActorControllers ?? new Dictionary<ElementPosition, CombatActorController>();
         }
 
         public void LoadActors(Dictionary<ElementPosition, CombatActorInfo> combatActors,

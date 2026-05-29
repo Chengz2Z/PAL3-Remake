@@ -13,13 +13,16 @@ namespace Pal3.Game.GameSystems.Trading
     using Core.Command;
     using Core.Command.SceCommands;
     using Core.Contract.Enums;
+    using Core.DataReader.Gdb;
     using Core.Utilities;
+    using Data;
     using Engine.Animation;
     using Engine.Coroutine;
     using Engine.Extensions;
     using Engine.Logging;
     using Engine.Services;
     using Engine.UI;
+    using GameSystems.Inventory;
     using Input;
     using State;
     using TMPro;
@@ -137,11 +140,11 @@ namespace Pal3.Game.GameSystems.Trading
             ShowBuyItems();
 
             // 播放显示动画
-            _gameStateManager.GoToState(GameState.UI);
+            _gameStateManager.TryGoToState(GameState.UI);
             _shopCanvasGroup.blocksRaycasts = true;
             _isShopVisible = true;
 
-            CoroutineRunner.StartCoroutine(PlayShowAnimationAsync(true));
+            Pal3.Instance.StartCoroutine(PlayShowAnimationAsync(true));
         }
 
         public void HideShop()
@@ -151,7 +154,7 @@ namespace Pal3.Game.GameSystems.Trading
             _isShopVisible = false;
             _shopCanvasGroup.interactable = false;
 
-            CoroutineRunner.StartCoroutine(PlayShowAnimationAsync(false));
+            Pal3.Instance.StartCoroutine(PlayShowAnimationAsync(false));
         }
 
         private void UpdateMoneyDisplay()
@@ -357,7 +360,7 @@ namespace Pal3.Game.GameSystems.Trading
             if (item == null) return;
 
             // 执行出售
-            Pal3.Instance.Execute(new InventoryRemoveItemCommand(item.Id, 1));
+            Pal3.Instance.Execute(new InventoryRemoveItemCommand((int)item.Id));
             Pal3.Instance.Execute(new InventoryAddMoneyCommand(item.Price));
 
             UpdateMoneyDisplay();
@@ -394,7 +397,7 @@ namespace Pal3.Game.GameSystems.Trading
             {
                 _shopCanvasGroup.interactable = false;
                 _shopCanvasGroup.blocksRaycasts = false;
-                _gameStateManager.GoToState(GameState.Gameplay);
+                _gameStateManager.TryGoToState(GameState.Gameplay);
                 ClearItemButtons();
                 _currentShopData = null;
             }

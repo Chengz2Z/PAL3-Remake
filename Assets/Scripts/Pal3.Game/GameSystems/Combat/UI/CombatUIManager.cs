@@ -20,6 +20,7 @@ namespace Pal3.Game.GameSystems.Combat.UI
     using Scene;
     using TMPro;
     using UnityEngine;
+    using UnityEngine.EventSystems;
     using UnityEngine.UI;
 
     /// <summary>
@@ -123,6 +124,14 @@ namespace Pal3.Game.GameSystems.Combat.UI
             _combatItemManager = Requires.IsNotNull(combatItemManager, nameof(combatItemManager));
 
             CreateUIElements();
+        }
+
+        /// <summary>
+        /// Initialize HP/MP bars after combat actors are loaded.
+        /// Must be called after CombatScene.LoadActors().
+        /// </summary>
+        public void InitializeHPMPBars()
+        {
             CreateHPMPBars();
         }
 
@@ -242,7 +251,7 @@ namespace Pal3.Game.GameSystems.Combat.UI
             }
 
             // Animate the popup
-            StartCoroutine(AnimateDamagePopup(popup));
+            Pal3.Instance.StartCoroutine(AnimateDamagePopup(popup));
         }
 
         /// <summary>
@@ -269,7 +278,7 @@ namespace Pal3.Game.GameSystems.Combat.UI
                 rectTransform.position = screenPos;
             }
 
-            StartCoroutine(AnimateDamagePopup(popup));
+            Pal3.Instance.StartCoroutine(AnimateDamagePopup(popup));
         }
 
         /// <summary>
@@ -413,7 +422,7 @@ namespace Pal3.Game.GameSystems.Combat.UI
                 ActorCombatStateType.Sleep => new Color(0.6f, 0.6f, 0.8f), // Light blue
                 ActorCombatStateType.Seal => new Color(0.8f, 0.2f, 0.8f), // Magenta
                 ActorCombatStateType.Chaos => new Color(0.8f, 0.4f, 0.0f), // Orange
-                ActorCombatStateType.Regeneration => new Color(0.2f, 0.8f, 0.2f), // Bright green
+                ActorCombatStateType.ExpIncrease => new Color(0.2f, 0.8f, 0.2f), // Bright green
                 _ => new Color(0.5f, 0.5f, 0.5f), // Gray
             };
         }
@@ -431,7 +440,7 @@ namespace Pal3.Game.GameSystems.Combat.UI
                 ActorCombatStateType.Sleep => "眠",
                 ActorCombatStateType.Seal => "封",
                 ActorCombatStateType.Chaos => "乱",
-                ActorCombatStateType.Regeneration => "回",
+                ActorCombatStateType.ExpIncrease => "精",
                 _ => "?",
             };
         }
@@ -831,7 +840,7 @@ namespace Pal3.Game.GameSystems.Combat.UI
 
             foreach (var itemInfo in usableItems)
             {
-                int itemCount = _combatItemManager.GetItemCount(itemInfo.Id);
+                int itemCount = _combatItemManager.GetItemCount((int)itemInfo.Id);
                 string buttonName = $"{itemInfo.Name} x{itemCount}";
                 Button itemButton = CreateButton(_itemSelectionPanel.transform,
                     $"Item_{itemInfo.Id}", buttonName, new Vector2(0, -40 * index));
@@ -928,7 +937,7 @@ namespace Pal3.Game.GameSystems.Combat.UI
             {
                 ActionType = CombatActionType.Skill,
                 Target = target,
-                SkillId = _selectedSkill?.Id ?? 0,
+                SkillId = (int)_selectedSkill.Id,
             };
             HideActionMenu();
             _onActionSelected?.Invoke(_currentSelection);
@@ -940,7 +949,7 @@ namespace Pal3.Game.GameSystems.Combat.UI
             {
                 ActionType = CombatActionType.Item,
                 Target = target,
-                ItemId = _selectedItem?.Id ?? 0,
+                ItemId = (int)_selectedItem.Id,
             };
             HideActionMenu();
             _onActionSelected?.Invoke(_currentSelection);

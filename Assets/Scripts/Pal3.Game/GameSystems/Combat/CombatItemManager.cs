@@ -59,17 +59,16 @@ namespace Pal3.Game.GameSystems.Combat
         /// </summary>
         public bool IsItemUsableInCombat(GameItemInfo itemInfo)
         {
-            if (itemInfo == null) return false;
+            if (itemInfo.Id == 0) return false;
 
             // Check item type and special type
             switch (itemInfo.Type)
             {
-                case ItemType.Drug: // 药品
-                case ItemType.Throw: // 投掷
-                case ItemType.Seed: // 种子
+                case ItemType.Healing: // 药品
+                case ItemType.Throwable: // 投掷
                     return true;
 
-                case ItemType.Accessory: // 饰品
+                case ItemType.Wearable: // 饰品
                     // Some accessories might have combat effects
                     return itemInfo.ItemSpecialType != ItemSpecialType.None;
 
@@ -107,7 +106,7 @@ namespace Pal3.Game.GameSystems.Combat
         /// </summary>
         public void UseItem(CombatActorController user, CombatActorController target, GameItemInfo itemInfo)
         {
-            if (user == null || target == null || itemInfo == null) return;
+            if (user == null || target == null || itemInfo.Id == 0) return;
 
             // Remove item from inventory
             // Note: We need to execute the command through the command system
@@ -117,19 +116,15 @@ namespace Pal3.Game.GameSystems.Combat
             // Apply item effects based on type
             switch (itemInfo.Type)
             {
-                case ItemType.Drug:
+                case ItemType.Healing:
                     ApplyDrugEffect(target, itemInfo);
                     break;
 
-                case ItemType.Throw:
+                case ItemType.Throwable:
                     ApplyThrowEffect(target, itemInfo);
                     break;
 
-                case ItemType.Seed:
-                    ApplySeedEffect(target, itemInfo);
-                    break;
-
-                case ItemType.Accessory:
+                case ItemType.Wearable:
                     ApplyAccessoryEffect(target, itemInfo);
                     break;
             }
@@ -216,13 +211,6 @@ namespace Pal3.Game.GameSystems.Combat
             }
         }
 
-        private void ApplySeedEffect(CombatActorController target, GameItemInfo itemInfo)
-        {
-            // Seeds might have various effects like curing status conditions
-            // For now, just apply basic healing
-            ApplyDrugEffect(target, itemInfo);
-        }
-
         private void ApplyAccessoryEffect(CombatActorController target, GameItemInfo itemInfo)
         {
             // Accessories might have special effects
@@ -230,7 +218,7 @@ namespace Pal3.Game.GameSystems.Combat
             ApplyDrugEffect(target, itemInfo);
         }
 
-        private void ConsumeItem(int itemId)
+        private void ConsumeItem(uint itemId)
         {
             // Execute item removal through command system
             // This would normally be done through the command system

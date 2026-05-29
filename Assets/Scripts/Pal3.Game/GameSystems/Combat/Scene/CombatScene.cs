@@ -20,6 +20,7 @@ namespace Pal3.Game.GameSystems.Combat.Scene
     using Engine.Extensions;
     using Rendering.Material;
     using Rendering.Renderer;
+    using UI;
 
     using Vector3 = UnityEngine.Vector3;
     using Quaternion = UnityEngine.Quaternion;
@@ -114,7 +115,8 @@ namespace Pal3.Game.GameSystems.Combat.Scene
         }
 
         public void LoadActors(Dictionary<ElementPosition, CombatActorInfo> combatActors,
-            MeetType meetType)
+            MeetType meetType,
+            CombatUIManager combatUIManager = null)
         {
             _combatActorControllers = new Dictionary<ElementPosition, CombatActorController>();
 
@@ -154,7 +156,12 @@ namespace Pal3.Game.GameSystems.Combat.Scene
 
                 combatActorGameEntity.Transform.SetPositionAndRotation(GetWorldPosition(elementPosition), rotation);
 
-                _combatActorControllers[elementPosition] = combatActorGameEntity.GetComponent<CombatActorController>();
+                CombatActorController controller = combatActorGameEntity.GetComponent<CombatActorController>();
+                controller.Init(combatActor,
+                    combatActorGameEntity.GetComponent<ActorActionController>(),
+                    elementPosition,
+                    combatUIManager);
+                _combatActorControllers[elementPosition] = controller;
             }
         }
     }

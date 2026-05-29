@@ -9,6 +9,7 @@ namespace Pal3.Game.GameSystems.Combat
     {
         Idle = 0,        // Combat scene loaded but turn system has not started
         TurnStart,       // Decide whose turn is next, advance pointer
+        WaitingForPlayerInput, // Waiting for player to select an action
         ActorActing,     // An actor is performing an action (animation/coroutine running)
         TurnEnd,         // Bookkeeping for end of one actor's turn
         CheckResult,     // Win/loss check; transitions to Finished or back to TurnStart

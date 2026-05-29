@@ -10,22 +10,21 @@ namespace Pal3.Game.GameSystems.Combat
     using System.Collections.Generic;
     using System.Linq;
     using Actor.Controllers;
+    using Core.Contract.Enums;
     using Core.Utilities;
     using Scene;
+    using UI;
 
     /// <summary>
-    /// Stage-1 turn-based combat driver.
+    /// Stage-4 turn-based combat driver with UI support.
     ///
     /// Each round:
     ///   1. Build a turn queue ordered by Speed (descending). Defeated actors are skipped.
-    ///   2. For each actor in the queue, pick a target on the opposing side and run a
-    ///      normal-attack coroutine.
+    ///   2. For each actor in the queue:
+    ///      - If it's a player actor, show the action menu and wait for player input.
+    ///      - If it's an enemy actor, pick a random target and perform a normal attack.
     ///   3. After every individual turn, check whether either side has been wiped out;
     ///      if so the combat ends.
-    ///
-    /// Player-side action selection is still automated in this stage — the goal here is to
-    /// replace the F1-F6 test keys with a proper round/turn loop. UI-driven action menus
-    /// land in stage 4.
     /// </summary>
     public sealed class CombatTurnSystem
     {
@@ -35,15 +34,30 @@ namespace Pal3.Game.GameSystems.Combat
 
         private readonly CombatScene _combatScene;
         private readonly Func<IEnumerator, object> _coroutineRunner;
+        private readonly CombatUIManager _combatUIManager;
+        private readonly SkillManager _skillManager;
+        private readonly CombatItemManager _combatItemManager;
+        private readonly GameResourceProvider _resourceProvider;
 
         private readonly Queue<CombatActorController> _turnQueue = new();
         private bool _actionInProgress;
         private int _roundNumber;
+        private CombatActorController _currentActor;
+        private CombatActionSelection _playerAction;
 
-        public CombatTurnSystem(CombatScene combatScene, Func<IEnumerator, object> coroutineRunner)
+        public CombatTurnSystem(CombatScene combatScene,
+            Func<IEnumerator, object> coroutineRunner,
+            CombatUIManager combatUIManager = null,
+            SkillManager skillManager = null,
+            CombatItemManager combatItemManager = null,
+            GameResourceProvider resourceProvider = null)
         {
             _combatScene = Requires.IsNotNull(combatScene, nameof(combatScene));
             _coroutineRunner = Requires.IsNotNull(coroutineRunner, nameof(coroutineRunner));
+            _combatUIManager = combatUIManager;
+            _skillManager = skillManager;
+            _combatItemManager = combatItemManager;
+            _resourceProvider = resourceProvider;
         }
 
         public void Begin()
@@ -62,6 +76,10 @@ namespace Pal3.Game.GameSystems.Combat
 
                 case CombatPhase.TurnStart:
                     AdvanceToNextActor();
+                    break;
+
+                case CombatPhase.WaitingForPlayerInput:
+                    // Waiting for player to select an action
                     break;
 
                 case CombatPhase.ActorActing:
@@ -107,7 +125,33 @@ namespace Pal3.Game.GameSystems.Combat
                 return;
             }
 
-            CombatActorController target = PickTarget(next);
+            _currentActor = next;
+
+            // Check if this is a player actor
+            if (IsPlayerActor(next))
+            {
+                // Show action menu for player actor
+                if (_combatUIManager != null)
+                {
+                    Phase = CombatPhase.WaitingForPlayerInput;
+                    _combatUIManager.ShowActionMenu(OnPlayerActionSelected, next);
+                }
+                else
+                {
+                    // Fallback to auto-attack if no UI manager
+                    PerformAutoAttack(next);
+                }
+            }
+            else
+            {
+                // Enemy actor - auto attack
+                PerformAutoAttack(next);
+            }
+        }
+
+        private void PerformAutoAttack(CombatActorController actor)
+        {
+            CombatActorController target = PickTarget(actor);
             if (target == null)
             {
                 Phase = CombatPhase.CheckResult;
@@ -115,14 +159,103 @@ namespace Pal3.Game.GameSystems.Combat
             }
 
             _actionInProgress = true;
-            _coroutineRunner(RunActorTurn(next, target));
+            _coroutineRunner(RunActorTurn(actor, target, CombatActionType.Attack));
             Phase = CombatPhase.ActorActing;
         }
 
-        private IEnumerator RunActorTurn(CombatActorController actor, CombatActorController target)
+        private void OnPlayerActionSelected(CombatActionSelection selection)
         {
-            yield return actor.StartNormalAttackAsync(target, _combatScene);
+            _playerAction = selection;
+            _actionInProgress = true;
+
+            CombatActorController target = selection.Target;
+
+            // If no target selected (defend/flee), use self as target
+            if (target == null)
+            {
+                target = _currentActor;
+            }
+
+            _coroutineRunner(RunActorTurn(_currentActor, target, selection.ActionType));
+            Phase = CombatPhase.ActorActing;
+        }
+
+        private IEnumerator RunActorTurn(CombatActorController actor,
+            CombatActorController target,
+            CombatActionType actionType)
+        {
+            switch (actionType)
+            {
+                case CombatActionType.Attack:
+                    yield return actor.StartNormalAttackAsync(target, _combatScene);
+                    break;
+
+                case CombatActionType.Skill:
+                    if (_skillManager != null && _playerAction != null && _playerAction.SkillId > 0)
+                    {
+                        SkillInfo skillInfo = _skillManager.GetSkillInfo(_playerAction.SkillId);
+                        if (skillInfo != null)
+                        {
+                            _skillManager.ExecuteSkill(actor, target, skillInfo);
+                            // Show skill effect animation or message
+                            yield return new WaitForSeconds(1.0f);
+                        }
+                        else
+                        {
+                            // Fallback to normal attack
+                            yield return actor.StartNormalAttackAsync(target, _combatScene);
+                        }
+                    }
+                    else
+                    {
+                        // Fallback to normal attack
+                        yield return actor.StartNormalAttackAsync(target, _combatScene);
+                    }
+                    break;
+
+                case CombatActionType.Item:
+                    if (_combatItemManager != null && _playerAction != null && _playerAction.ItemId > 0)
+                    {
+                        GameItemInfo itemInfo = _resourceProvider.GetGameItemInfos()[_playerAction.ItemId];
+                        if (itemInfo != null)
+                        {
+                            _combatItemManager.UseItem(actor, target, itemInfo);
+                            // Show item use animation or message
+                            yield return new WaitForSeconds(1.0f);
+                        }
+                        else
+                        {
+                            // Fallback to normal attack
+                            yield return actor.StartNormalAttackAsync(target, _combatScene);
+                        }
+                    }
+                    else
+                    {
+                        // Fallback to normal attack
+                        yield return actor.StartNormalAttackAsync(target, _combatScene);
+                    }
+                    break;
+
+                case CombatActionType.Defend:
+                    // Implement defend action (reduce damage for one turn)
+                    // For now, just wait a bit
+                    yield return new WaitForSeconds(0.5f);
+                    break;
+
+                case CombatActionType.Flee:
+                    // Implement flee logic
+                    // For now, just wait a bit
+                    yield return new WaitForSeconds(0.5f);
+                    break;
+            }
+
             _actionInProgress = false;
+        }
+
+        private bool IsPlayerActor(CombatActorController actor)
+        {
+            ElementPosition position = actor.GetElementPosition();
+            return DamageCalculator.IsAlly(position);
         }
 
         private CombatActorController PickTarget(CombatActorController attacker)

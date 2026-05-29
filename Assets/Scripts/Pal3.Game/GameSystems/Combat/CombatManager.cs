@@ -25,6 +25,9 @@ namespace Pal3.Game.GameSystems.Combat
     using Scene;
     using State;
     using Team;
+    using UI;
+    using UnityEngine;
+    using UnityEngine.EventSystems;
     using UnityEngine.InputSystem;
 
     using Quaternion = UnityEngine.Quaternion;
@@ -47,6 +50,7 @@ namespace Pal3.Game.GameSystems.Combat
         private readonly SceneManager _sceneManager;
         private readonly CameraManager _cameraManager;
         private readonly GameStateManager _gameStateManager;
+        private readonly EventSystem _eventSystem;
 
         private readonly IDictionary<int, CombatActorInfo> _combatActorInfos;
         private readonly CombatCameraConfigFile _combatCameraConfigFile;
@@ -58,21 +62,32 @@ namespace Pal3.Game.GameSystems.Combat
         private CombatScene _combatScene;
         private CombatContext _currentCombatContext;
         private CombatTurnSystem _turnSystem;
+        private CombatUIManager _combatUIManager;
+        private Canvas _combatUICanvas;
         private bool _resultDispatched;
+        private SkillManager _skillManager;
+        private CombatItemManager _combatItemManager;
 
         public CombatManager(GameResourceProvider resourceProvider,
             TeamManager teamManager,
             CameraManager cameraManager,
-            SceneManager sceneManager)
+            SceneManager sceneManager,
+            EventSystem eventSystem)
         {
             Requires.IsNotNull(resourceProvider, nameof(resourceProvider));
             _teamManager = Requires.IsNotNull(teamManager, nameof(teamManager));
             _cameraManager = Requires.IsNotNull(cameraManager, nameof(cameraManager));
             _sceneManager = Requires.IsNotNull(sceneManager, nameof(sceneManager));
+            _eventSystem = Requires.IsNotNull(eventSystem, nameof(eventSystem));
 
             _combatActorInfos = resourceProvider.GetCombatActorInfos();
             _combatCameraConfigFile = resourceProvider.GetGameResourceFile<CombatCameraConfigFile>(
                 FileConstants.DataScriptFolderVirtualPath + COMBAT_CAMERA_CONFIG_FILE_NAME);
+
+            // Initialize skill and item managers
+            _skillManager = new SkillManager(resourceProvider);
+            _combatItemManager = new CombatItemManager(resourceProvider,
+                Pal3.Instance.GetService<InventoryManager>());
         }
 
         public void EnterCombat(CombatContext combatContext)
@@ -91,6 +106,9 @@ namespace Pal3.Game.GameSystems.Combat
 
             _combatScene = _sceneManager.LoadCombatScene(combatContext.CombatSceneName);
 
+            // Create combat UI first
+            CreateCombatUI();
+
             Dictionary<ElementPosition, CombatActorInfo> combatActors = new ();
 
             int positionIndex = 0;
@@ -108,7 +126,7 @@ namespace Pal3.Game.GameSystems.Combat
                     _combatActorInfos[(int)enemyActorId];
             }
 
-            _combatScene.LoadActors(combatActors, combatContext.MeetType);
+            _combatScene.LoadActors(combatActors, combatContext.MeetType, _combatUIManager);
 
             SetCameraPosition(_combatCameraConfigFile.DefaultCamConfigs[0]);
 
@@ -123,7 +141,11 @@ namespace Pal3.Game.GameSystems.Combat
             }
 
             _turnSystem = new CombatTurnSystem(_combatScene,
-                routine => Pal3.Instance.StartCoroutine(routine));
+                routine => Pal3.Instance.StartCoroutine(routine),
+                _combatUIManager,
+                _skillManager,
+                _combatItemManager,
+                Pal3.Instance.GetService<GameResourceProvider>());
             _turnSystem.Begin();
             _resultDispatched = false;
         }
@@ -136,8 +158,47 @@ namespace Pal3.Game.GameSystems.Combat
             _sceneManager.UnloadCombatScene();
             ResetCameraPosition();
 
+            // Cleanup combat UI
+            CleanupCombatUI();
+
             _turnSystem = null;
             _combatScene = null;
+        }
+
+        private void CreateCombatUI()
+        {
+            // Create a canvas for combat UI
+            GameObject canvasObj = new GameObject("CombatUI");
+            _combatUICanvas = canvasObj.AddComponent<Canvas>();
+            _combatUICanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            _combatUICanvas.sortingOrder = 100; // Ensure it's on top
+
+            canvasObj.AddComponent<CanvasScaler>();
+            canvasObj.AddComponent<GraphicRaycaster>();
+
+            // Create combat UI manager
+            _combatUIManager = new CombatUIManager(
+                Pal3.Instance.GetService<GameResourceProvider>(),
+                _combatScene,
+                _combatUICanvas,
+                _eventSystem,
+                _skillManager,
+                _combatItemManager);
+        }
+
+        private void CleanupCombatUI()
+        {
+            if (_combatUIManager != null)
+            {
+                _combatUIManager.Dispose();
+                _combatUIManager = null;
+            }
+
+            if (_combatUICanvas != null)
+            {
+                UnityEngine.Object.Destroy(_combatUICanvas.gameObject);
+                _combatUICanvas = null;
+            }
         }
 
         private void SetCameraPosition(CombatCameraConfig config)
@@ -175,6 +236,12 @@ namespace Pal3.Game.GameSystems.Combat
             if (_turnSystem == null || _resultDispatched) return;
 
             _turnSystem.Tick();
+
+            // Update UI
+            if (_combatUIManager != null)
+            {
+                _combatUIManager.UpdateActorStatus();
+            }
 
             if (_turnSystem.IsFinished)
             {

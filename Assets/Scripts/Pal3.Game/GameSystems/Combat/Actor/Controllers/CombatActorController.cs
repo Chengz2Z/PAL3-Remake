@@ -14,6 +14,7 @@ namespace Pal3.Game.GameSystems.Combat.Actor.Controllers
     using Engine.Core.Implementation;
     using Game.Actor.Controllers;
     using Scene;
+    using UI;
 
     using Quaternion = UnityEngine.Quaternion;
     using Vector3 = UnityEngine.Vector3;
@@ -27,6 +28,7 @@ namespace Pal3.Game.GameSystems.Combat.Actor.Controllers
         private ActorActionController _actionController;
         private ElementPosition _elementPosition;
         private CombatActorRuntimeState _runtimeState;
+        private CombatUIManager _combatUIManager;
 
         public bool IsActive
         {
@@ -48,12 +50,14 @@ namespace Pal3.Game.GameSystems.Combat.Actor.Controllers
 
         public void Init(CombatActor actor,
             ActorActionController actionController,
-            ElementPosition elementPosition)
+            ElementPosition elementPosition,
+            CombatUIManager combatUIManager = null)
         {
             _actor = actor;
             _actionController = actionController;
             _elementPosition = elementPosition;
             _runtimeState = new CombatActorRuntimeState(actor.Info);
+            _combatUIManager = combatUIManager;
         }
 
         private void AnimationEventTriggered(object sender, string eventName)
@@ -147,6 +151,13 @@ namespace Pal3.Game.GameSystems.Combat.Actor.Controllers
             if (_runtimeState == null) yield break;
 
             _runtimeState.TakeDamage(damage);
+
+            // Show damage popup
+            if (_combatUIManager != null)
+            {
+                Vector3 worldPos = _actionController.Transform.Position + UnityEngine.Vector3.up * 2f;
+                _combatUIManager.ShowDamagePopup(worldPos, damage);
+            }
 
             if (_runtimeState.IsDefeated)
             {

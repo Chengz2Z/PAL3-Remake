@@ -463,7 +463,8 @@ namespace Pal3.Game
                 new CombatManager(_gameResourceProvider,
                     _teamManager,
                     _cameraManager,
-                    _sceneManager)
+                    _sceneManager,
+                    eventSystem)
             );
 
             ServiceLocator.Instance.Register(_combatCoordinator =

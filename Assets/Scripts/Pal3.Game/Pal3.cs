@@ -287,7 +287,7 @@ namespace Pal3.Game
             );
 
             ServiceLocator.Instance.Register(_tradingManager =
-                new TradingManager()
+                new TradingManager(_gameResourceProvider)
             );
 
             ServiceLocator.Instance.Register(_teamManager =

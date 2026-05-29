@@ -47,6 +47,7 @@ namespace Pal3.Core.Contract.Constants
         private const string BASE_DATA_FOLDER_NAME = "basedata";
         private const string MUSIC_FOLDER_NAME = "music";
         private const string DATA_SCRIPT_FOLDER_NAME = "datascript";
+        private const string DEAL_SCRIPT_FOLDER_NAME = "DealScript";
 
         private const string BASE_DATA_CPK_FILE_NAME = "basedata.cpk";
         private const string MUSIC_CPK_FILE_NAME = "music.cpk";
@@ -115,6 +116,9 @@ namespace Pal3.Core.Contract.Constants
 
         public static readonly string DataScriptFolderVirtualPath =
             $"{BASE_DATA_CPK_FILE_NAME}{DIR_SEPARATOR}{DATA_SCRIPT_FOLDER_NAME}{DIR_SEPARATOR}";
+
+        public static readonly string DealScriptFolderVirtualPath =
+            $"{BASE_DATA_CPK_FILE_NAME}{DIR_SEPARATOR}{DEAL_SCRIPT_FOLDER_NAME}{DIR_SEPARATOR}";
 
         public static readonly string EffectFolderVirtualPath =
             $"{BASE_DATA_CPK_FILE_NAME}{DIR_SEPARATOR}{EFFECT_FOLDER_NAME}{DIR_SEPARATOR}";
